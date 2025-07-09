@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stylish Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+    <nav class="navbar">
+        <h1>✨ Stylish Calculator</h1>
+    </nav>
+
+    <div class="container">
+        <div class="calculator">
+            <div class="display">
+                <div class="display-previous" id="previousDisplay"></div>
+                <div class="display-current" id="currentDisplay">0</div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn btn-clear" onclick="clearAll()">C</button>
+                <button class="btn btn-clear" onclick="backspace()">⌫</button>
+                <button class="btn btn-operator" onclick="inputOperator('%')">%</button>
+                <button class="btn btn-operator" onclick="inputOperator('/')">÷</button>
+
+                <button class="btn" onclick="inputNumber('7')">7</button>
+                <button class="btn" onclick="inputNumber('8')">8</button>
+                <button class="btn" onclick="inputNumber('9')">9</button>
+                <button class="btn btn-operator" onclick="inputOperator('*')">×</button>
+
+                <button class="btn" onclick="inputNumber('4')">4</button>
+                <button class="btn" onclick="inputNumber('5')">5</button>
+                <button class="btn" onclick="inputNumber('6')">6</button>
+                <button class="btn btn-operator" onclick="inputOperator('-')">−</button>
+
+                <button class="btn" onclick="inputNumber('1')">1</button>
+                <button class="btn" onclick="inputNumber('2')">2</button>
+                <button class="btn" onclick="inputNumber('3')">3</button>
+                <button class="btn btn-operator" onclick="inputOperator('+')">+</button>
+
+                <button class="btn btn-history" onclick="showHistory()">History</button>
+                <button class="btn" onclick="inputNumber('.')">.</button>
+                <button class="btn btn-equals" onclick="calculate()">=</button>
+
+                <button class="btn btn-zero" onclick="inputNumber('0')">0</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="history-modal" id="historyModal">
+        <div class="history-content">
+            <div class="history-header">
+                <h2>Calculation History</h2>
+                <button class="close-btn" onclick="closeHistory()">×</button>
+            </div>
+            <div id="historyList"></div>
+            <button class="clear-history-btn" onclick="clearHistory()">Clear All History</button>
+        </div>
+    </div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
