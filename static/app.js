@@ -1,179 +1,261 @@
- let currentInput = '0';
-        let previousInput = '';
-        let operator = '';
-        let shouldResetDisplay = false;
-        let history = [];
+// Calculator state
+let currentExpression = '';
+let displayValue = '0';
+let shouldResetDisplay = false;
+let isCalculating = false;
 
-        const currentDisplay = document.getElementById('currentDisplay');
-        const previousDisplay = document.getElementById('previousDisplay');
-        const historyModal = document.getElementById('historyModal');
-        const historyList = document.getElementById('historyList');
+// DOM elements
+const currentDisplay = document.getElementById('currentDisplay');
+const previousDisplay = document.getElementById('previousDisplay');
+const historyModal = document.getElementById('historyModal');
+const historyList = document.getElementById('historyList');
+const themeToggle = document.getElementById('themeToggle');
 
-        function updateDisplay() {
-            currentDisplay.textContent = currentInput;
-            previousDisplay.textContent = previousInput + ' ' + (operator ? getOperatorSymbol(operator) : '');
+// Theme management
+function initializeTheme() {
+    // Check for saved theme or default to light
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    themeToggle.checked = savedTheme === 'dark';
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+}
+
+// Event listener for theme toggle
+themeToggle.addEventListener('change', toggleTheme);
+
+// Update display
+function updateDisplay() {
+    currentDisplay.textContent = displayValue;
+    previousDisplay.textContent = currentExpression;
+}
+
+// Get operator symbol for display
+function getOperatorSymbol(op) {
+    const symbols = {
+        '+': '+',
+        '-': '−',
+        '*': '×',
+        '/': '÷',
+        '%': '%'
+    };
+    return symbols[op] || op;
+}
+
+// Input number
+function inputNumber(num) {
+    if (shouldResetDisplay) {
+        displayValue = num;
+        shouldResetDisplay = false;
+    } else {
+        // Handle decimal point
+        if (num === '.' && displayValue.includes('.')) {
+            return;
         }
-
-        function getOperatorSymbol(op) {
-            const symbols = {
-                '+': '+',
-                '-': '−',
-                '*': '×',
-                '/': '÷',
-                '%': '%'
-            };
-            return symbols[op] || op;
+        
+        // Handle multiple digits
+        if (displayValue === '0' && num !== '.') {
+            displayValue = num;
+        } else {
+            displayValue += num;
         }
+    }
+    updateDisplay();
+}
 
-        function inputNumber(num) {
-            if (shouldResetDisplay) {
-                currentInput = num;
-                shouldResetDisplay = false;
-            } else {
-                currentInput = currentInput === '0' ? num : currentInput + num;
-            }
-            updateDisplay();
-        }
+// Input operator
+function inputOperator(op) {
+    if (shouldResetDisplay) {
+        shouldResetDisplay = false;
+    }
+    
+    // If there's already an expression, append the current value
+    if (currentExpression && !currentExpression.endsWith(' ')) {
+        currentExpression += ' ' + displayValue;
+    } else if (!currentExpression) {
+        currentExpression = displayValue;
+    }
+    
+    // Add operator to expression
+    currentExpression += ' ' + getOperatorSymbol(op);
+    shouldResetDisplay = true;
+    updateDisplay();
+}
 
-        function inputOperator(op) {
-            if (operator && !shouldResetDisplay) {
-                calculate();
-            }
-            
-            operator = op;
-            previousInput = currentInput;
-            shouldResetDisplay = true;
-            updateDisplay();
-        }
-
-        function calculate() {
-            if (!operator || shouldResetDisplay) return;
-
-            const prev = parseFloat(previousInput);
-            const current = parseFloat(currentInput);
-            let result;
-
-            switch (operator) {
-                case '+':
-                    result = prev + current;
-                    break;
-                case '-':
-                    result = prev - current;
-                    break;
-                case '*':
-                    result = prev * current;
-                    break;
-                case '/':
-                    if (current === 0) {
-                        alert('Cannot divide by zero!');
-                        return;
-                    }
-                    result = prev / current;
-                    break;
-                case '%':
-                    result = prev % current;
-                    break;
-                default:
-                    return;
-            }
-
-            // Save to history
-            const calculation = {
-                expression: `${previousInput} ${getOperatorSymbol(operator)} ${currentInput}`,
-                result: result,
-                timestamp: new Date().toLocaleString()
-            };
-            history.unshift(calculation);
-            
-            // Keep only last 50 calculations
-            if (history.length > 50) {
-                history = history.slice(0, 50);
-            }
-
-            currentInput = result.toString();
-            operator = '';
-            previousInput = '';
-            shouldResetDisplay = true;
-            updateDisplay();
-        }
-
-        function clearAll() {
-            currentInput = '0';
-            previousInput = '';
-            operator = '';
-            shouldResetDisplay = false;
-            updateDisplay();
-        }
-
-        function backspace() {
-            if (currentInput.length > 1) {
-                currentInput = currentInput.slice(0, -1);
-            } else {
-                currentInput = '0';
-            }
-            updateDisplay();
-        }
-
-        function showHistory() {
-            renderHistory();
-            historyModal.style.display = 'flex';
-        }
-
-        function closeHistory() {
-            historyModal.style.display = 'none';
-        }
-
-        function renderHistory() {
-            if (history.length === 0) {
-                historyList.innerHTML = '<div class="empty-history">No calculations yet!</div>';
-                return;
-            }
-
-            historyList.innerHTML = history.map(item => `
-                <div class="history-item" onclick="useHistoryResult('${item.result}')">
-                    <div class="history-expression">${item.expression}</div>
-                    <div class="history-result">= ${item.result}</div>
-                </div>
-            `).join('');
-        }
-
-        function useHistoryResult(result) {
-            currentInput = result;
-            operator = '';
-            previousInput = '';
-            shouldResetDisplay = true;
-            updateDisplay();
-            closeHistory();
-        }
-
-        function clearHistory() {
-            history = [];
-            renderHistory();
-        }
-
-        // Close modal when clicking outside
-        historyModal.addEventListener('click', (e) => {
-            if (e.target === historyModal) {
-                closeHistory();
-            }
+// Calculate expression
+async function calculate() {
+    if (isCalculating) return;
+    
+    // Complete the expression with current display value
+    let fullExpression = currentExpression;
+    if (fullExpression && !fullExpression.endsWith(' ')) {
+        fullExpression += ' ' + displayValue;
+    } else if (!fullExpression) {
+        fullExpression = displayValue;
+    } else {
+        fullExpression += displayValue;
+    }
+    
+    try {
+        isCalculating = true;
+        document.querySelector('.calculator').classList.add('loading');
+        
+        const response = await fetch('/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ expression: fullExpression })
         });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayValue = data.result.toString();
+            currentExpression = '';
+            shouldResetDisplay = true;
+            updateDisplay();
+        } else {
+            showError(data.error);
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+    } finally {
+        isCalculating = false;
+        document.querySelector('.calculator').classList.remove('loading');
+    }
+}
 
-        // Keyboard support
-        document.addEventListener('keydown', (e) => {
-            if (e.key >= '0' && e.key <= '9') {
-                inputNumber(e.key);
-            } else if (e.key === '.') {
-                inputNumber('.');
-            } else if (['+', '-', '*', '/', '%'].includes(e.key)) {
-                inputOperator(e.key);
-            } else if (e.key === 'Enter' || e.key === '=') {
-                calculate();
-            } else if (e.key === 'Escape') {
-                clearAll();
-            } else if (e.key === 'Backspace') {
-                backspace();
-            }
+// Show error message
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    
+    const calculator = document.querySelector('.calculator');
+    calculator.insertBefore(errorDiv, calculator.firstChild);
+    
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 3000);
+}
+
+// Clear all
+function clearAll() {
+    currentExpression = '';
+    displayValue = '0';
+    shouldResetDisplay = false;
+    updateDisplay();
+}
+
+// Backspace - delete one character at a time
+function backspace() {
+    if (displayValue.length > 1) {
+        displayValue = displayValue.slice(0, -1);
+    } else {
+        displayValue = '0';
+    }
+    updateDisplay();
+}
+
+// Show history
+async function showHistory() {
+    try {
+        const response = await fetch('/history');
+        const data = await response.json();
+        
+        renderHistory(data.history);
+        historyModal.style.display = 'flex';
+    } catch (error) {
+        showError('Failed to load history');
+    }
+}
+
+// Close history modal
+function closeHistory() {
+    historyModal.style.display = 'none';
+}
+
+// Render history
+function renderHistory(history) {
+    if (history.length === 0) {
+        historyList.innerHTML = '<div class="empty-history">No calculations yet!</div>';
+        return;
+    }
+
+    historyList.innerHTML = history.map(item => `
+        <div class="history-item" onclick="useHistoryResult('${item.result}')">
+            <div class="history-expression">${item.expression}</div>
+            <div class="history-result">= ${item.result}</div>
+        </div>
+    `).join('');
+}
+
+// Use history result
+function useHistoryResult(result) {
+    displayValue = result;
+    currentExpression = '';
+    shouldResetDisplay = true;
+    updateDisplay();
+    closeHistory();
+}
+
+// Clear history
+async function clearHistory() {
+    try {
+        const response = await fetch('/history', {
+            method: 'DELETE'
         });
+        
+        if (response.ok) {
+            renderHistory([]);
+        } else {
+            showError('Failed to clear history');
+        }
+    } catch (error) {
+        showError('Network error. Please try again.');
+    }
+}
 
-        // Initialize display
-        updateDisplay();
+// Close modal when clicking outside
+historyModal.addEventListener('click', (e) => {
+    if (e.target === historyModal) {
+        closeHistory();
+    }
+});
+
+// Keyboard support
+document.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+        inputNumber(e.key);
+    } else if (e.key === '.') {
+        inputNumber('.');
+    } else if (['+', '-', '*', '/', '%'].includes(e.key)) {
+        inputOperator(e.key);
+    } else if (e.key === 'Enter' || e.key === '=') {
+        e.preventDefault();
+        calculate();
+    } else if (e.key === 'Escape') {
+        clearAll();
+    } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        backspace();
+    }
+});
+
+// Prevent form submission on Enter
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+    }
+});
+
+// Initialize display and theme
+updateDisplay();
+initializeTheme();
